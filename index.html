@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en" onmousemove="mousemove(event)" onmouseup="mouseup(event)">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="index.css"/>
+    <title>Test</title>
+    <script>
+        var translationOffsets = {
+            x: 0,
+            y: 0,
+            scale: 0
+        }
+        var currentsize = 1
+        var currenty = 0
+        var currentx = 0
+
+
+        if(!window.requestAnimationFrame) {
+            window.requestAnimationFrame = function (callback) {
+                callback();
+                return 0
+            }
+        }
+
+        function changesize(scale) {
+            scale = parseFloat(scale);
+            currentsize = scale;
+            window.requestAnimationFrame(function () {
+                document.getElementById("labelsize").textContent = Math.round(currentsize).toString();
+                document.getElementById("scaleinput").value = currentsize;
+                var viewBox = document.getElementById("scaling").viewBox.baseVal;
+                viewBox.height = (255 / currentsize)
+                viewBox.width = (255 / currentsize)
+                translationOffsets.scale = (scale - 1) * 127.5 / currentsize
+                viewBox.x = (translationOffsets.x + translationOffsets.scale)
+                viewBox.y = (translationOffsets.y + translationOffsets.scale)
+            })
+        }
+
+        var tickx = false;
+
+        function changex(newval) {
+            translationOffsets.x = newval
+            currentx = newval
+            if (tickx) return
+
+            tickx = true;
+            window.requestAnimationFrame(function () {
+                document.getElementById("xinput").value = currentx;
+                document.getElementById("scaling").viewBox.baseVal.x = (translationOffsets.x + translationOffsets.scale);
+                document.getElementById("labelx").textContent = currentx;
+                tickx = false;
+            })
+        }
+
+        var ticky = false;
+
+        function changey(newval) {
+            translationOffsets.y = newval
+            currenty = newval
+
+            if (ticky) return
+
+            ticky = true;
+            window.requestAnimationFrame(function () {
+                document.getElementById("yinput").value = currenty;
+                document.getElementById("scaling").viewBox.baseVal.y = (translationOffsets.y + translationOffsets.scale);
+                document.getElementById("labely").textContent = currenty;
+                ticky = false;
+            })
+        }
+
+        function zoomwheel(event) {
+            event.preventDefault();
+
+            var delta
+            if (event.deltaY) {
+                delta = event.deltaY * -0.08
+            } else {
+                delta = event.wheelDelta * 0.002
+            }
+
+            changesize(Math.max(Math.min(currentsize + delta * Math.min(currentsize, 2), 10), 1))
+        }
+
+        var clickEventsEnabled = true;
+        var clickTimer = 0;
+        var clickDisableTimer = 0;
+        var mouseDown = false;
+        var last = [0, 0];
+
+        function mousedown(event) {
+            event.preventDefault();
+            last = [
+                event.pageX,
+                event.pageY
+            ]
+            mouseDown = true;
+            window.clearInterval(clickDisableTimer)
+            clickDisableTimer = window.setInterval(function () {
+                window.clearInterval(clickTimer)
+                clickEventsEnabled = false;
+            }, 100)
+        }
+
+        function mouseup(event) {
+            event.preventDefault();
+
+            mouseDown = false;
+            window.clearInterval(clickDisableTimer)
+            clickTimer = window.setTimeout(function () {
+                clickEventsEnabled = true
+            }, 100)
+        }
+
+        var tickpos = false;
+
+        function mousemove(event) {
+            event.preventDefault();
+
+            var box = document.getElementById("scaling").getBoundingClientRect();
+            var offsetX = box.left + window.pageXOffset;
+            var offsetY = box.top + window.pageYOffset;
+
+            if (!tickpos) {
+                tickpos = true;
+                window.requestAnimationFrame(function () {
+                    var viewBox = document.getElementById("scaling").viewBox.baseVal
+                    var x = Math.floor((event.pageX - offsetX) * 0.425 / currentsize + viewBox.x);
+                    var y = 254 - Math.floor((event.pageY - offsetY) * 0.425 / currentsize + viewBox.y);
+                    if (x > 0 && y > 0 && x < 255 && y < 255) {
+                        document.getElementById("position").textContent = x + ',' + y;
+                    } else {
+                        if(event.shiftKey) debugger;
+                        document.getElementById("position").textContent = "??,??"
+                    }
+                    tickpos = false;
+                })
+            }
+
+            if (!mouseDown) return;
+
+
+            //Coefficent is mapsize / realsize
+            changex(Math.max(Math.min(currentx - (event.pageX - last[0]) * 0.425 / currentsize, 127), -127))
+            changey(Math.max(Math.min(currenty - (event.pageY - last[1]) * 0.425 / currentsize, 127), -127))
+            last = [
+                event.pageX,
+                event.pageY
+            ]
+        }
+
+        var blunk = false;
+        var blunkstroke = false;
+        var blunkstroke2 = true;
+        window.setInterval(function () {
+            var elements = document.getElementsByClassName("blink");
+            for (var i = 0; i < elements.length; i++) {
+                var element = elements[i];
+                element.style.fillOpacity = blunk ? "0.65" : "0"
+            }
+            blunk = !blunk;
+        }, 500);
+        window.setInterval(function () {
+            var elements = document.getElementsByClassName("blinkstroke");
+            for (var i = 0; i < elements.length; i++) {
+                var element = elements[i];
+                element.style.strokeOpacity = !blunkstroke ? "0.65" : "0"
+            }
+            blunkstroke = !blunkstroke;
+        }, 500);
+        window.setInterval(function () {
+            var elements = document.getElementsByClassName("blinkstroke2");
+            for (var i = 0; i < elements.length; i++) {
+                var element = elements[i];
+                element.style.strokeOpacity = !blunkstroke2 ? "1" : "0"
+            }
+            blunkstroke2 = !blunkstroke2;
+        }, 500);
+
+        function clickevent(event) {
+            if (clickEventsEnabled) {
+                alert(1)
+            }
+        }
+    </script>
+</head>
+<body>
+<h1>Hello World!</h1>
+<div class="flex" style="justify-content: center">
+    <label>
+        Zoom (<span id="labelsize">1</span>)<br>
+        <input id="scaleinput" type="range" min="1" max="10" value="1" placeholder="1" step="1"
+               oninput="changesize(value)"
+               onchange="changesize(value)">
+    </label>
+    <label>
+        X (<span id="labelx">0</span>)<br>
+        <input id="xinput" type="range" min="-100" max="100" value="0" step="0.001" oninput="changex(parseInt(value))"
+               onchange="changex(parseInt(value))">
+    </label>
+    <label>
+        Y (<span id="labely">0</span>)<br>
+        <input id="yinput" type="range" min="-100" max="100" value="0" step="0.0001" oninput="changey(parseInt(value))"
+               onchange="changey(parseInt(value))">
+    </label>
+</div>
+<br>
+
+<div class="mapcontainer" onmousewheel="zoomwheel(event)" onwheel="zoomwheel(event)" onmousedown="mousedown(event)">
+    <svg onclick="clickevent(event)" xmlns="http://www.w3.org/2000/svg" id="scaling" viewBox="0 0 255 255" height="600"
+         width="600">
+        <!--120, 133-->
+        <!--maxx = 239    235
+            maxy = 208    228
+            minx = 41     19
+            miny = 57     31
+            max - min + 1
+            width = 199   217
+            height = 152  198
+
+            offsetx = minx = 41         19
+            offsety = 254 - maxy = 46   26
+            -->
+
+        <!--suppress HtmlUnknownAttribute -->
+        <image height="152" width="199" x="41" y="46" href="minimapbox.png" onload="/*setsize(this.ownerSVGElement)*/"
+               preserveAspectRatio image-rendering="optimizeSpeed"
+               image-rendering="-moz-crisp-edges"
+               image-rendering="optimize-contrast"
+               image-rendering="crisp-edges"
+               image-rendering="pixelated"
+               -ms-interpolation-mode="nearest-neighbor"></image>
+
+
+        <rect height="255" width="1" x="0" y="-1" fill="red"></rect>
+        <rect height="256" width="1" x="255" y="-1" fill="red"></rect>
+        <rect height="1" width="255" x="0" y="-1" fill="red"></rect>
+        <rect height="1" width="255" x="0" y="254" fill="red"></rect>
+        <rect height="1" width="1" x="127" y="127" fill="lime" opacity="0.2"></rect>
+        <!--path class="blink" d="
+         M 103,102
+         L 117,102
+         L 117,100
+         L 124,100
+         L 124,102
+         L 138,102
+         L 138,135
+         L 135,135
+         L 135,134
+         L 103,134 z
+         M 135,105
+         L 106,105
+         L 106,109
+         L 108,109
+         L 108,112
+         L 106,112
+         L 106,123
+         L 108,123
+         L 108,131
+         L 135,131
+         L 135,112
+         L 133,112
+         L 133,109
+         L 135,109 z" fill="red" stroke-width="0.5"></path-->
+        <!-- m110,80h21v3h-9v17h2v2h4v-2h3v2h7v12h16v-1h8v1h5v-1h4v1h1v-4h3v4h21v-2h-1v-2h1v-3h1v-4h2v4h2v-1h-1v-3h3v2h6v1h-7v1h7v1h-6v5h6v1h-6v1h6v1h-6v2h-6v-1h-4v1h-11v-1h-44v18h-3v-1h-13v8h1v2h1v-2h3v4h1v2h-2v1h3v-4h-1v-4h3v4h1v-3h3v1h1v-1h3v3h1v-2h7v3h6v7h-1v1h-3v-1h-1v1h-1v1h-3v1h3v15h3v4h-3v-1h-1v-5h-1v4h-1v-4h-1v1h-3v-14h3v-1h-3v-1h-1v-5h1v-3h-1v2h-3v-1h-1v1h-3v-2h-1v5h-4v1h-1v1h1v4h4v4h-1v1h1v3h-1v1h1v6h1v-1h2v1h2v3h-2v2h4v2h-3v-1h-1v2h1v1h1v1h-1v1h-1v1h2v1h-4v-1h1v-1h-1v-3h1v-1h-1v-6h-1v10h-4v1h-2v1h2v5h-13v-5h2v-1h-2v-1h-1v-10h-1v4h-1v-1h-1v-1h1v-1h-1v-2h-1v4h-6v-4h-1v1h-2v-1h-1v1h-2v1h3v2h-1v3h-5v-5h2v-1h-2v-7h5v5h1v-1h2v1h1v-3h1v2h7v-2h3v-1h-3v-1h-1v3h-3v-6h3v1h1v-1h6v1h1v-1h3v4h-3v-1h-1v1h-2v1h7v-1h4v-1h-4v-3h1v-1h-1v-1h5v6h1v-1h1v-1h-1v-3h1v-1h-1v-1h-4v-1h-1v1h-5v-4h1v-1h-2v5h-7v-3h-1v1h-2v-3h2v1h1v-3h8v1h1v-20h-16v-22h-2v-1h2v-6h-2v1h-7v-1h-26v3h-10v10h-4v-1h-1v3h-1v-3h-1v2h-4v-2h-1v3h-1v-3h-1v-2h12v-1h-1v-1h1v-1h-3v-1h3v-1h-1v-1h1v-1h-12v-1h-1v1h-1v-1h-1v-1h1v-1h1v1h2v-3h1v3h1v-2h4v2h1v-3h1v3h1v-1h2v-11h-2v-1h-1v3h-1v-3h-1v2h-4v-2h-1v3h-1v-3h-2v1h-1v-1h-1v-1h1v-1h1v1h1v-1h14v9h4v-1h1v1h5v2h49v-2h2v-17h-13v-2h4zm51,15h5v3h-1v1h-1v-1h-1v-1h-2zm-102,7h-1v4h1zm6,0h-1v4h1zm42,3h-1v4h2v3h-2v12h1v-1h1v7h-2v1h29v-19h-2v-3h2v-4zm17,40h-1v1h1zm0,2h-1v6h-1v4h1v1h1v-2h-1v-2h1v-1h1v-1h-1v-3h1v-1h-1zm9,3h3v3h-3zm4,0h1v3h-1zm16,4h1v1h-1zm-15,2h1v13h-1zm10,0h1v13h-1zm-14,1h3v3h-3zm16,0h3v3h-3zm-16,4h3v3h-3zm16,0h3v3h-3zm-16,4h3v3h-3zm16,0h3v3h-3zm-36,5h-1v1h-1v1h2v-1h5v-1zm7,0h-1v1h1zm2,0h-1v1h5v1h2v-1h-1v-1zm6,3h-1v4h1v-1h1v-1h-1zm-10,1h-1v2h-2v1h4v-1h-1v-1h1v-1zm3,0h-1v1h1v1h-1v1h4v-1h-2v-2zm-5,6h-1v1h9v-1zm1,4h-1v1h7v-1zm10,0h1v2h-1z -->
+        <defs>
+            <pattern id="pattern" patternUnits="userSpaceOnUse" width="4" height="4">
+                <rect x="0" y="0" width="4" height="4" fill="red" opacity="0.3"></rect>
+                <path d="M-1,1 l2,-2
+           M0,4 l4,-4
+           M3,5 l2,-2"
+                      stroke="black" stroke-width="1" class="blinkstroke2" opacity="1"/>
+            </pattern>
+        </defs>
+        <path class="blinkstroke" fill="url(#pattern)" cursor="pointer" stroke="red" stroke-width="0.7"
+              stroke-linecap="round" stroke-dasharray="10 3" d="
+M103,134h1v1h1v12h1v-2h1v-1h2v2h1v1h-1v4h10v1h-10v1h-2v-2h-1v2h-1v7h4v1h9v-1h3v2h-15v8h-1v-2h-3v1h-1v-5h-10v1h2v4h-2v4h1v5h-5v-5h1v-4h-3v-3h1v-5h-5v-6h3v-4h6v-3h2v-5h6v-1h1v-6h-1v-1h5
+M102,142h-1v1h1
+M102,146h-1v1h-2v1h3
+"/>
+    </svg>
+</div>
+<h1 id="position" style="text-align: center">0,0</h1>
+<svg viewBox="0 0 20 20" width="450" height="450">
+    <defs>
+        <rect id="square" width="1" height="1" opacity="0"></rect>
+        <pattern id="grid" width="2" height="2" patternUnits="userSpaceOnUse">
+            <use href="#square" fill="black" x="0" y="0"></use>
+            <use href="#square" fill="#ff00ff" x="0" y="1"></use>
+            <use href="#square" fill="#ff00ff" x="1" y="0"></use>
+            <use href="#square" fill="black" x="1" y="1"></use>
+        </pattern>
+    </defs>
+
+    <rect width="100%" height="100%" fill="url(#grid)"/>
+    <path fill="blue"
+          d="M0,0h1v2h2v-2h1v5h-1v-2h-2v2h-1M5,0h4v1h-3v1h3v1h-3v1h3v1h-4M10,0h2v1h2v-1h2v1h-1v1h-1v3h-2v-3h-1v-1h-1M13,2M13,3M13,4"></path>
+</svg>
+</body>
+</html>

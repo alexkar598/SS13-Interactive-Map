@@ -1,0 +1,35 @@
+body::before {
+    content: "CSS Loaded";
+}
+
+body {
+    background-color: #25252d;
+    color: white;
+}
+
+#testcontainer {
+    position: relative
+}
+
+#testbox {
+    background-color: white;
+    opacity: 0.2;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 10px;
+    height: 50px;
+    pointer-events: none;
+}
+
+.flex {
+    display: flex;
+}
+
+.mapcontainer {
+    width: 600px;
+    height: 600px;
+    overflow: hidden;
+    margin: auto;
+    border: white solid;
+}
